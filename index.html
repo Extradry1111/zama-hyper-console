@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAMA | HYPER-CONSOLE v5.1</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon: #FFE600;
+            --neon-dim: rgba(255, 230, 0, 0.2);
+            --bg: #030303;
+            --panel-bg: rgba(10, 10, 12, 0.9);
+            --border: 1px solid rgba(255, 230, 0, 0.35);
+            --red: #FF2A2A;
+            --green: #00FF9D;
+            --blue: #00D4FF;
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; overflow: hidden; background: var(--bg); 
+            color: #fff; font-family: 'Rajdhani', sans-serif;
+        }
+
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+            display: flex; flex-direction: column;
+            pointer-events: none;
+            opacity: 0; transition: opacity 1s ease;
+        }
+
+        /* INTRO */
+        #intro-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+            transition: opacity 0.5s;
+        }
+        
+        .intro-title {
+            font-family: 'JetBrains Mono'; font-size: 3.5rem; font-weight: 800;
+            letter-spacing: -2px; margin-bottom: 20px;
+            text-shadow: 0 0 30px var(--neon); animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { text-shadow: 0 0 20px var(--neon); }
+            50% { text-shadow: 0 0 40px var(--neon), 0 0 80px rgba(255,230,0,0.3); }
+        }
+
+        .intro-btn {
+            background: transparent; color: var(--neon); border: 2px solid var(--neon);
+            padding: 15px 50px; font-family: 'JetBrains Mono'; font-size: 1.1rem;
+            cursor: pointer; transition: 0.3s; letter-spacing: 3px;
+            text-transform: uppercase; pointer-events: auto; position: relative;
+            overflow: hidden;
+        }
+        .intro-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: var(--neon); z-index: -1; transition: 0.4s;
+        }
+        .intro-btn:hover::before { left: 0; }
+        .intro-btn:hover { color: #000; box-shadow: 0 0 40px var(--neon); }
+
+        /* HEADER */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 40px; background: rgba(0,0,0,0.85); border-bottom: var(--border);
+            pointer-events: auto; backdrop-filter: blur(5px);
+        }
+        .logo { font-family: 'JetBrains Mono'; font-weight: 800; font-size: 1.6rem; letter-spacing: -1px; }
+        .logo span { color: var(--neon); }
+
+        /* LAYOUT */
+        .main-grid {
+            display: grid; grid-template-columns: 260px 1fr 380px;
+            height: calc(100vh - 80px); pointer-events: auto;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: rgba(5,5,5,0.85); border-right: var(--border);
+            padding: 20px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .nav-item {
+            padding: 15px; border: 1px solid transparent; color: #666; cursor: pointer;
+            font-family: 'JetBrains Mono'; font-size: 0.95rem; transition: 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .nav-item::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: var(--neon-dim); z-index: -1; transition: 0.3s;
+        }
+        .nav-item:hover::before { left: 0; }
+        .nav-item:hover { color: #fff; }
+        .nav-item.active {
+            color: var(--neon); border: 1px solid var(--neon);
+            background: var(--neon-dim); box-shadow: inset 0 0 15px var(--neon-dim);
+        }
+        .nav-item.locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+
+        /* CENTER STAGE */
+        .stage {
+            position: relative; perspective: 1000px;
+            display: flex; align-items: center; justify-content: center;
+            overflow-y: auto; background: rgba(0,0,0,0.2);
+        }
+        
+        .card {
+            width: 580px; background: var(--panel-bg); border: 2px solid #333;
+            border-top: 3px solid var(--neon); padding: 45px; position: relative;
+            transform: rotateX(8deg); transition: transform 0.4s, opacity 0.4s;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9), inset 0 0 40px rgba(255,230,0,0.02);
+            display: none; margin: 30px auto; backdrop-filter: blur(10px);
+        }
+        .card.active { display: block; animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(60px) rotateX(15deg); } 
+            to { opacity: 1; transform: translateY(0) rotateX(8deg); } 
+        }
+
+        h2 { 
+            margin: 0 0 12px 0; font-family: 'JetBrains Mono'; 
+            color: var(--neon); text-transform: uppercase; font-size: 1.5rem; letter-spacing: 1px;
+        }
+        p.sub { margin: 0 0 25px 0; color: #999; font-size: 0.95rem; line-height: 1.6; }
+
+        input, textarea {
+            width: 100%; background: rgba(0,0,0,0.7); border: 1px solid #444; color: #fff;
+            padding: 13px; font-family: 'JetBrains Mono'; font-size: 1rem; margin-bottom: 15px;
+            outline: none; transition: 0.3s;
+        }
+        input:focus, textarea:focus { border-color: var(--neon); box-shadow: 0 0 20px var(--neon-dim); }
+        input.error { border-color: var(--red); color: var(--red); animation: shake 0.3s; }
+
+        @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        .action-btn {
+            width: 100%; padding: 16px; border: 2px solid var(--neon); background: transparent;
+            color: var(--neon); font-family: 'JetBrains Mono'; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; transition: 0.2s; font-size: 1rem; position: relative;
+            overflow: hidden;
+        }
+        .action-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: var(--neon); z-index: -1; transition: 0.3s;
+        }
+        .action-btn:hover::before { left: 0; }
+        .action-btn:hover { color: #000; box-shadow: 0 0 30px var(--neon-dim); }
+        
+        .vote-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;
+        }
+        .vote-option {
+            background: rgba(0,0,0,0.6); padding: 20px; border: 2px solid #333;
+            text-align: center; cursor: pointer; transition: 0.3s;
+            position: relative;
+        }
+        .vote-option:hover { border-color: var(--neon); transform: scale(1.05); }
+        .vote-option.selected { border-color: var(--green); background: rgba(0, 255, 157, 0.08); box-shadow: inset 0 0 15px rgba(0,255,157,0.1); }
+        .vote-label { color: #777; font-size: 0.8rem; margin-bottom: 10px; letter-spacing: 1px; }
+        .vote-count { font-size: 1.6rem; filter: blur(4px); color: #555; font-family: 'JetBrains Mono'; font-weight: bold; }
+
+        /* VAULT */
+        .vault-display {
+            display: none; text-align: center;
+            border: 2px solid var(--green); background: rgba(0, 255, 157, 0.08); padding: 30px;
+        }
+        .vault-icon {
+            width: 70px; height: 70px; margin: 0 auto 20px;
+            border: 2px solid var(--green); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 30px rgba(0, 255, 157, 0.3), inset 0 0 20px rgba(0,255,157,0.1);
+            animation: rotate 3s linear infinite;
+        }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .secret-data {
+            font-family: 'JetBrains Mono'; color: var(--green); font-size: 1.3rem;
+            border: 2px dashed var(--green); padding: 15px; margin-top: 10px;
+            background: rgba(0,0,0,0.8); letter-spacing: 1px;
+        }
+
+        /* INFO PANEL */
+        .info-panel {
+            background: rgba(5,5,5,0.85); border-left: var(--border);
+            padding: 25px; color: #ccc; font-size: 1rem; line-height: 1.8;
+            overflow-y: auto; backdrop-filter: blur(5px);
+        }
+        .info-section {
+            margin-bottom: 30px; padding-bottom: 25px; border-bottom: 1px solid #222;
+        }
+        .info-section:last-child { border: none; }
+        .info-title {
+            color: var(--neon); font-weight: bold; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 10px; font-size: 1.05rem; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .log-box {
+            height: 200px; border-top: 1px solid #333; margin-top: 15px;
+            padding-top: 10px; font-family: 'JetBrains Mono'; font-size: 0.9rem;
+            color: #888; overflow: hidden; display: flex; flex-direction: column-reverse;
+            line-height: 1.7;
+        }
+
+        .icon-svg { width: 22px; height: 22px; fill: currentColor; }
+
+        .step-list {
+            margin: 10px 0; padding-left: 0; list-style: none;
+        }
+        .step-list li {
+            padding: 10px 0; padding-left: 28px; position: relative;
+            color: #bbb; font-size: 0.98rem; line-height: 1.6;
+        }
+        .step-list li:before {
+            content: "▹"; position: absolute; left: 5px; color: var(--neon); font-size: 1.3rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 3D WORLD -->
+    <div id="canvas-container"></div>
+
+    <!-- INTRO -->
+    <div id="intro-layer">
+        <div style="font-family: 'JetBrains Mono'; color: var(--neon); font-size: 0.9rem; margin-bottom: 15px; letter-spacing: 3px;">ZAMA.AI ENCRYPTED RUNTIME</div>
+        <div class="intro-title">HYPER-CONSOLE</div>
+        <div style="font-family: 'Rajdhani'; letter-spacing: 6px; margin-bottom: 50px; color: #aaa; font-size: 1.1rem;">v5.1 SECURE PROTOCOL</div>
+        <button class="intro-btn" onclick="triggerWarp()">INITIALIZE SYSTEM</button>
+    </div>
+
+    <!-- MAIN UI -->
+    <div id="ui-layer">
+        <header>
+            <div class="logo">ZAMA <span>CONSOLE</span></div>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <span id="music-indicator" style="font-family: 'JetBrains Mono'; font-size: 0.85rem; color: var(--neon); opacity: 0;">SYNTHESIZER: ACTIVE</span>
+                <button id="wallet-btn" class="intro-btn" style="padding: 10px 25px; font-size: 0.9rem; margin:0;" onclick="connectWallet()">CONNECT WALLET</button>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <!-- LEFT NAV -->
+            <div class="sidebar">
+                <div id="nav-dash" class="nav-item locked" onclick="setTab('dash')">01 // VAULT</div>
+                <div id="nav-tx" class="nav-item locked" onclick="setTab('tx')">02 // TRANSACTIONS</div>
+                <div id="nav-vote" class="nav-item locked" onclick="setTab('vote')">03 // VOTING</div>
+            </div>
+
+            <!-- CENTER STAGE -->
+            <div class="stage">
+                
+                <!-- LOCKED STATE -->
+                <div id="card-lock" class="card active" style="text-align: center;">
+                    <svg class="icon-svg" style="width: 70px; height: 70px; color: var(--neon); margin-bottom: 25px;" viewBox="0 0 24 24">
+                        <path d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5zm0 2c1.654 0 3 1.346 3 3v3H9V7c0-1.654 1.346-3 3-3zm0 10c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2z"/>
+                    </svg>
+                    <h2>SYSTEM LOCKED</h2>
+                    <p class="sub">Cryptographic Signature Required</p>
+                    <p style="font-size: 1rem; line-height: 1.8;">Connect your Web3 wallet to generate Ephemeral Keys for the FHE Runtime. All computations occur on encrypted data without revealing plaintext values to validators.</p>
+                </div>
+
+                <!-- VAULT -->
+                <div id="card-dash" class="card">
+                    <h2>ENCRYPTED VAULT</h2>
+                    <p class="sub">Verify PIN using Homomorphic Encryption without revealing the input</p>
+                    
+                    <div id="vault-input-area">
+                        <input type="password" id="pin-input" placeholder="ENTER PIN (2025)" maxlength="4">
+                        <button class="action-btn" onclick="unlockVault()">DECRYPT</button>
+                    </div>
+
+                    <div id="vault-content" class="vault-display">
+                        <div class="vault-icon">
+                            <svg class="icon-svg" style="color: var(--green); width: 35px; height: 35px;" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                        </div>
+                        <h3 style="color: var(--green); font-family: 'JetBrains Mono'; font-size: 1.3rem;">ACCESS GRANTED</h3>
+                        <p style="font-size: 0.95rem; color: #aaa; margin-bottom: 15px;">Decrypted Kernel Data:</p>
+                        <div class="secret-data">0x7F_ZAMA_CORE_V5</div>
+                    </div>
+                </div>
+
+                <!-- TRANSACTIONS -->
+                <div id="card-tx" class="card">
+                    <h2>ENCRYPTED TRANSFER</h2>
+                    <p class="sub">Send confidential transactions where amount and recipient remain private on-chain</p>
+                    
+                    <label style="color: #888; font-size: 0.95rem; margin-bottom: 8px; display: block; letter-spacing: 1px;">RECIPIENT ADDRESS</label>
+                    <input type="text" id="tx-recipient" placeholder="0x...">
+                    
+                    <label style="color: #888; font-size: 0.95rem; margin-bottom: 8px; display: block; letter-spacing: 1px;">AMOUNT (ETH)</label>
+                    <input type="text" id="tx-amount" placeholder="0.00">
+                    
+                    <button class="action-btn" onclick="sendTx()">ENCRYPT & BROADCAST</button>
+                    
+                    <div id="tx-success" style="display: none; margin-top: 25px; border: 2px solid var(--green); padding: 20px; background: rgba(0,255,157,0.08);">
+                        <div style="color: var(--green); font-family: 'JetBrains Mono'; font-size: 1rem; letter-spacing: 1px;">TRANSACTION CONFIRMED</div>
+                        <div style="font-size: 0.9rem; color: #888; margin-top: 8px;">Hash: 0xf8a3...92b1</div>
+                    </div>
+                </div>
+
+                <!-- VOTING -->
+                <div id="card-vote" class="card">
+                    <h2>DARK DAO VOTE</h2>
+                    <p class="sub">Cast encrypted votes where your choice remains hidden until the reveal phase</p>
+                    
+                    <div style="background: rgba(0,0,0,0.6); border: 1px solid #333; padding: 18px; margin-bottom: 25px;">
+                        <div style="font-size: 0.9rem; color: #888; margin-bottom: 8px; letter-spacing: 1px;">PROPOSAL #42</div>
+                        <div style="font-size: 1.1rem; line-height: 1.6;">Should the protocol implement new fee structure?</div>
+                    </div>
+
+                    <div class="vote-grid">
+                        <div class="vote-option" id="vote-yes" onclick="selectVote('yes')">
+                            <div class="vote-label">OPTION A</div>
+                            <div style="font-size: 1.3rem; margin-bottom: 10px; color: var(--green);">YES</div>
+                            <div class="vote-count">127</div>
+                        </div>
+                        <div class="vote-option" id="vote-no" onclick="selectVote('no')">
+                            <div class="vote-label">OPTION B</div>
+                            <div style="font-size: 1.3rem; margin-bottom: 10px; color: var(--red);">NO</div>
+                            <div class="vote-count">93</div>
+                        </div>
+                    </div>
+                    
+                    <button class="action-btn" id="vote-submit" onclick="castVote()" disabled>CAST ENCRYPTED VOTE</button>
+                    
+                    <div id="vote-success" style="display: none; margin-top: 25px; border: 2px solid var(--green); padding: 20px; background: rgba(0,255,157,0.08); text-align: center;">
+                        <div style="color: var(--green); font-family: 'JetBrains Mono'; font-size: 1rem; letter-spacing: 1px;">VOTE RECORDED</div>
+                        <div style="font-size: 0.9rem; color: #888; margin-top: 8px;">Your encrypted choice has been added to the tally</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT INFO -->
+            <div class="info-panel">
+                <div class="info-section">
+                    <div class="info-title">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        INSTRUCTIONS
+                    </div>
+                    <div id="guide-text" style="font-size: 1rem; line-height: 1.8;">
+                        Connect your wallet to unlock the FHE console. The synthesizer will generate dynamic music automatically to enhance your experience.
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-title">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        WHAT IS FHE?
+                    </div>
+                    <div style="font-size: 1rem; line-height: 1.8;">
+                        Fully Homomorphic Encryption allows computations on encrypted data. Validators execute smart contracts without ever seeing the actual values—preserving complete privacy throughout the entire process.
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-title">CONSOLE LOG</div>
+                    <div class="log-box" id="console-log">
+                        <div>> System Ready.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE (GENERATIVE SYNTHESIZER) ---
+        let audioCtx;
+        let masterGain;
+        let isAudioActive = false;
+
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.08;
+            masterGain.connect(audioCtx.destination);
+
+            isAudioActive = true;
+            startSynthesizer();
+        }
+
+        function startSynthesizer() {
+            // Ambient bassline sequencer
+            const tempo = 130;
+            const beatDuration = 60 / tempo;
+            let step = 0;
+            const sequence = [55, 55, 60, 55, 53, 55, 58, 55, 55, 60, 55, 53, 55, 60, 58, 53];
+
+            function playStep() {
+                const freq = sequence[step % sequence.length];
+                playBassTone(freq, beatDuration * 0.45);
+                
+                if (Math.random() > 0.7) playKickDrum();
+                
+                step++;
+                setTimeout(playStep, beatDuration * 1000);
+            }
+
+            playStep();
+        }
+
+        function playBassTone(freq, duration) {
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            filter.type = 'lowpass';
+            filter.frequency.value = 800;
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        function playKickDrum() {
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.4);
+            gain.gain.setValueAtTime(0.8, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        }
+
+        // --- 3D ENGINE ---
+        let scene, camera, renderer, starGeo, stars, tunnel;
+        let speed = 0.1;
+        let targetSpeed = 0.1;
+        let isWarping = false;
+
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030303, 0.003);
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 0;
+            camera.rotation.x = Math.PI/2.2;
+
+            renderer = new THREE.WebGLRenderer({alpha: false, antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x030303);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // WORMHOLE TUNNEL
+            const curve = new THREE.LineCurve3(
+                new THREE.Vector3(0, 0, -50),
+                new THREE.Vector3(0, 0, 50)
+            );
+            const tubeGeom = new THREE.TubeGeometry(curve, 20, 15, 8, false);
+            const tubeMat = new THREE.MeshBasicMaterial({
+                color: 0x0044ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.BackSide
+            });
+            tunnel = new THREE.Mesh(tubeGeom, tubeMat);
+            scene.add(tunnel);
+
+            // STARFIELD
+            let points = [];
+            for(let i=0; i<5000; i++) {
+                let star = new THREE.Vector3(
+                    Math.random() * 800 - 400,
+                    Math.random() * 800 - 400,
+                    Math.random() * 800 - 400
+                );
+                points.push(star);
+            }
+
+            starGeo = new THREE.BufferGeometry().setFromPoints(points);
+            let starMaterial = new THREE.PointsMaterial({
+                color: 0xFFE600,
+                size: 0.9,
+                transparent: true,
+                sizeAttenuation: true
+            });
+
+            stars = new THREE.Points(starGeo, starMaterial);
+            scene.add(stars);
+
+            animate();
+        }
+
+        function animate() {
+            const positions = starGeo.attributes.position.array;
+            speed += (targetSpeed - speed) * 0.05;
+
+            for(let i=0; i<5000; i++) {
+                positions[i*3 + 1] -= speed * 0.5;
+                if (positions[i*3 + 1] < -300) {
+                    positions[i*3 + 1] = 300;
+                }
+            }
+            
+            starGeo.attributes.position.needsUpdate = true;
+            stars.rotation.z += speed * 0.0008;
+            tunnel.rotation.z += speed * 0.001;
+            tunnel.position.z = (tunnel.position.z + speed * 0.3) % 50;
+            
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if(isWarping) return;
+            let x = (e.clientX / window.innerWidth) * 2 - 1;
+            let y = (e.clientY / window.innerHeight) * 2 - 1;
+            camera.rotation.y = -x * 0.08;
+            camera.rotation.z = -y * 0.08;
+        });
+
+        init3D();
+
+        // --- GAME LOGIC ---
+        function log(msg) {
+            const box = document.getElementById('console-log');
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            box.prepend(div);
+        }
+
+        function triggerWarp() {
+            isWarping = true;
+            targetSpeed = 3.5;
+            initAudio();
+            
+            document.querySelector('.intro-title').style.opacity = 0;
+            document.querySelector('.intro-btn').style.opacity = 0;
+            
+            setTimeout(() => {
+                document.getElementById('intro-layer').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('intro-layer').style.display = 'none';
+                    document.getElementById('ui-layer').style.opacity = 1;
+                    document.getElementById('music-indicator').style.opacity = 1;
+                    targetSpeed = 0.15;
+                    isWarping = false;
+                }, 1200);
+            }, 1800);
+        }
+
+        let isWalletConnected = false;
+
+        function connectWallet() {
+            const btn = document.getElementById('wallet-btn');
+            btn.innerText = "SIGNING...";
+            
+            setTimeout(() => {
+                isWalletConnected = true;
+                btn.innerText = "0x8F...A12";
+                btn.style.opacity = 0.5;
+                btn.onclick = null;
+                
+                document.getElementById('card-lock').style.display = 'none';
+                document.getElementById('nav-dash').classList.remove('locked');
+                document.getElementById('nav-tx').classList.remove('locked');
+                document.getElementById('nav-vote').classList.remove('locked');
+                
+                setTab('dash');
+                log("Wallet Connected. FHE Keys Generated.");
+                stars.material.color.setHex(0x00FF9D);
+                setTimeout(() => stars.material.color.setHex(0xFFE600), 1500);
+            }, 1200);
+        }
+
+        function setTab(id) {
+            if(!isWalletConnected) return;
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${id}`).classList.add('active');
+
+            document.querySelectorAll('.card').forEach(el => el.classList.remove('active'));
+            setTimeout(() => {
+                document.getElementById(`card-${id}`).classList.add('active');
+            }, 50);
+
+            const guide = document.getElementById('guide-text');
+            if(id === 'dash') {
+                guide.innerHTML = `<strong style="color: var(--neon);">HOW IT WORKS:</strong>
+                <ul class="step-list">
+                    <li>Your PIN is encrypted client-side using TFHE</li>
+                    <li>The encrypted value is compared on-chain</li>
+                    <li>Validators never see the actual PIN</li>
+                    <li>Result is decrypted only for you</li>
+                </ul>`;
+            } else if(id === 'tx') {
+                guide.innerHTML = `<strong style="color: var(--neon);">ENCRYPTED TRANSFERS:</strong>
+                <ul class="step-list">
+                    <li>Amount is encrypted as euint64</li>
+                    <li>Recipient balance updated homomorphically</li>
+                    <li>No observer can see transfer amounts</li>
+                    <li>Gas costs are deterministic</li>
+                </ul>`;
+            } else {
+                guide.innerHTML = `<strong style="color: var(--neon);">BLIND VOTING:</strong>
+                <ul class="step-list">
+                    <li>Vote is encrypted as euint8 (0 or 1)</li>
+                    <li>Added to encrypted tally on-chain</li>
+                    <li>Counts revealed only after voting ends</li>
+                    <li>Prevents vote buying and coercion</li>
+                </ul>`;
+            }
+        }
+
+        function unlockVault() {
+            const pin = document.getElementById('pin-input');
+            
+            if(pin.value === "2025") {
+                log("Verifying Homomorphic Proof...");
+                setTimeout(() => {
+                    document.getElementById('vault-input-area').style.display = 'none';
+                    document.getElementById('vault-content').style.display = 'block';
+                    log("SUCCESS. Data Decrypted.");
+                    
+                    stars.material.color.setHex(0x00FF9D);
+                    setTimeout(() => stars.material.color.setHex(0xFFE600), 2000);
+                }, 900);
+            } else {
+                log("Verification Failed. Invalid PIN.");
+                pin.classList.add('error');
+                setTimeout(() => pin.classList.remove('error'), 400);
+            }
+        }
+
+        function sendTx() {
+            const recipient = document.getElementById('tx-recipient').value;
+            const amount = document.getElementById('tx-amount').value;
+            
+            if(!recipient || !amount) {
+                log("Error: Missing transaction details");
+                return;
+            }
+
+            log("Encrypting transaction data...");
+            setTimeout(() => {
+                log("Broadcasting to ZAMA Network...");
+                setTimeout(() => {
+                    document.getElementById('tx-success').style.display = 'block';
+                    log("Transaction Confirmed!");
+                    
+                    stars.material.color.setHex(0x00D4FF);
+                    setTimeout(() => stars.material.color.setHex(0xFFE600), 2000);
+                }, 1200);
+            }, 900);
+        }
+
+        let selectedVote = null;
+
+        function selectVote(option) {
+            selectedVote = option;
+            
+            document.getElementById('vote-yes').classList.remove('selected');
+            document.getElementById('vote-no').classList.remove('selected');
+            document.getElementById(`vote-${option}`).classList.add('selected');
+            
+            document.getElementById('vote-submit').disabled = false;
+            log(`Vote Selected: ${option.toUpperCase()}`);
+        }
+
+        function castVote() {
+            if(!selectedVote) return;
+
+            log("Encrypting vote as euint8...");
+            setTimeout(() => {
+                log("Submitting to DAO contract...");
+                setTimeout(() => {
+                    document.getElementById('vote-success').style.display = 'block';
+                    document.getElementById('vote-submit').disabled = true;
+                    log("Vote Successfully Cast!");
+                    
+                    stars.material.color.setHex(0x00FF9D);
+                    setTimeout(() => stars.material.color.setHex(0xFFE600), 2000);
+                }, 1100);
+            }, 750);
+        }
+
+    </script>
+</body>
+</html>
