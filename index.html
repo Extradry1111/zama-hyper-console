@@ -37,7 +37,7 @@
             opacity: 0; transition: opacity 1s ease;
         }
 
-        /* INTRO */
+  
         #intro-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -70,7 +70,7 @@
         .intro-btn:hover::before { left: 0; }
         .intro-btn:hover { color: #000; box-shadow: 0 0 40px var(--neon); }
 
-        /* HEADER */
+    
         header {
             display: flex; justify-content: space-between; align-items: center;
             padding: 20px 40px; background: rgba(0,0,0,0.85); border-bottom: var(--border);
@@ -79,13 +79,13 @@
         .logo { font-family: 'JetBrains Mono'; font-weight: 800; font-size: 1.6rem; letter-spacing: -1px; }
         .logo span { color: var(--neon); }
 
-        /* LAYOUT */
+
         .main-grid {
             display: grid; grid-template-columns: 260px 1fr 380px;
             height: calc(100vh - 80px); pointer-events: auto;
         }
 
-        /* SIDEBAR */
+
         .sidebar {
             background: rgba(5,5,5,0.85); border-right: var(--border);
             padding: 20px; display: flex; flex-direction: column; gap: 10px;
@@ -107,7 +107,7 @@
         }
         .nav-item.locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
 
-        /* CENTER STAGE */
+  
         .stage {
             position: relative; perspective: 1000px;
             display: flex; align-items: center; justify-content: center;
@@ -169,7 +169,7 @@
         .vote-label { color: #777; font-size: 0.8rem; margin-bottom: 10px; letter-spacing: 1px; }
         .vote-count { font-size: 1.6rem; filter: blur(4px); color: #555; font-family: 'JetBrains Mono'; font-weight: bold; }
 
-        /* VAULT */
+
         .vault-display {
             display: none; text-align: center;
             border: 2px solid var(--green); background: rgba(0, 255, 157, 0.08); padding: 30px;
@@ -189,7 +189,7 @@
             background: rgba(0,0,0,0.8); letter-spacing: 1px;
         }
 
-        /* INFO PANEL */
+
         .info-panel {
             background: rgba(5,5,5,0.85); border-left: var(--border);
             padding: 25px; color: #ccc; font-size: 1rem; line-height: 1.8;
@@ -228,10 +228,10 @@
 </head>
 <body>
 
-    <!-- 3D WORLD -->
+
     <div id="canvas-container"></div>
 
-    <!-- INTRO -->
+
     <div id="intro-layer">
         <div style="font-family: 'JetBrains Mono'; color: var(--neon); font-size: 0.9rem; margin-bottom: 15px; letter-spacing: 3px;">ZAMA.AI ENCRYPTED RUNTIME</div>
         <div class="intro-title">HYPER-CONSOLE</div>
@@ -239,7 +239,7 @@
         <button class="intro-btn" onclick="triggerWarp()">INITIALIZE SYSTEM</button>
     </div>
 
-    <!-- MAIN UI -->
+
     <div id="ui-layer">
         <header>
             <div class="logo">ZAMA <span>CONSOLE</span></div>
@@ -250,17 +250,16 @@
         </header>
 
         <div class="main-grid">
-            <!-- LEFT NAV -->
+      
             <div class="sidebar">
                 <div id="nav-dash" class="nav-item locked" onclick="setTab('dash')">01 // VAULT</div>
                 <div id="nav-tx" class="nav-item locked" onclick="setTab('tx')">02 // TRANSACTIONS</div>
                 <div id="nav-vote" class="nav-item locked" onclick="setTab('vote')">03 // VOTING</div>
             </div>
 
-            <!-- CENTER STAGE -->
             <div class="stage">
                 
-                <!-- LOCKED STATE -->
+        
                 <div id="card-lock" class="card active" style="text-align: center;">
                     <svg class="icon-svg" style="width: 70px; height: 70px; color: var(--neon); margin-bottom: 25px;" viewBox="0 0 24 24">
                         <path d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5zm0 2c1.654 0 3 1.346 3 3v3H9V7c0-1.654 1.346-3 3-3zm0 10c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2z"/>
@@ -270,7 +269,7 @@
                     <p style="font-size: 1rem; line-height: 1.8;">Connect your Web3 wallet to generate Ephemeral Keys for the FHE Runtime. All computations occur on encrypted data without revealing plaintext values to validators.</p>
                 </div>
 
-                <!-- VAULT -->
+      
                 <div id="card-dash" class="card">
                     <h2>ENCRYPTED VAULT</h2>
                     <p class="sub">Verify PIN using Homomorphic Encryption without revealing the input</p>
@@ -292,7 +291,7 @@
                     </div>
                 </div>
 
-                <!-- TRANSACTIONS -->
+             
                 <div id="card-tx" class="card">
                     <h2>ENCRYPTED TRANSFER</h2>
                     <p class="sub">Send confidential transactions where amount and recipient remain private on-chain</p>
@@ -311,7 +310,7 @@
                     </div>
                 </div>
 
-                <!-- VOTING -->
+              
                 <div id="card-vote" class="card">
                     <h2>DARK DAO VOTE</h2>
                     <p class="sub">Cast encrypted votes where your choice remains hidden until the reveal phase</p>
@@ -344,7 +343,6 @@
 
             </div>
 
-            <!-- RIGHT INFO -->
             <div class="info-panel">
                 <div class="info-section">
                     <div class="info-title">
@@ -377,7 +375,7 @@
     </div>
 
     <script>
-        // --- AUDIO ENGINE (GENERATIVE SYNTHESIZER) ---
+   
         let audioCtx;
         let masterGain;
         let isAudioActive = false;
@@ -394,7 +392,7 @@
         }
 
         function startSynthesizer() {
-            // Ambient bassline sequencer
+        
             const tempo = 130;
             const beatDuration = 60 / tempo;
             let step = 0;
@@ -451,7 +449,7 @@
             osc.stop(now + 0.4);
         }
 
-        // --- 3D ENGINE ---
+   
         let scene, camera, renderer, starGeo, stars, tunnel;
         let speed = 0.1;
         let targetSpeed = 0.1;
@@ -470,7 +468,7 @@
             renderer.setClearColor(0x030303);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // WORMHOLE TUNNEL
+    
             const curve = new THREE.LineCurve3(
                 new THREE.Vector3(0, 0, -50),
                 new THREE.Vector3(0, 0, 50)
@@ -486,7 +484,7 @@
             tunnel = new THREE.Mesh(tubeGeom, tubeMat);
             scene.add(tunnel);
 
-            // STARFIELD
+
             let points = [];
             for(let i=0; i<5000; i++) {
                 let star = new THREE.Vector3(
@@ -547,7 +545,7 @@
 
         init3D();
 
-        // --- GAME LOGIC ---
+
         function log(msg) {
             const box = document.getElementById('console-log');
             const div = document.createElement('div');
